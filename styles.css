@@ -239,6 +239,10 @@ h2 {
     background: rgba(0, 0, 0, 0.9);
 }
 
+.bookmark-btn.bookmarked {
+    color: gold;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -330,6 +334,11 @@ h2 {
     font-size: 0.8rem;
 }
 
+.detail-description {
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
 .episodes-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -345,6 +354,7 @@ h2 {
     border-radius: 4px;
     cursor: pointer;
     text-align: center;
+    transition: background-color 0.3s;
 }
 
 .episode-btn:hover {
@@ -383,79 +393,6 @@ h2 {
     display: flex;
     justify-content: center;
     gap: 0.5rem;
-    margin-top: 2rem;
-}
-
-.pagination button {
-    padding: 0.5rem 1rem;
-    background-color: var(--secondary);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.pagination button:hover {
-    background-color: var(--primary);
-}
-
-.pagination button.active {
-    background-color: var(--primary);
-    font-weight: bold;
-}
-
-@media (max-width: 768px) {
-    header .container {
-        flex-direction: column;
-    }
-    
-    .search-container {
-        width: 100%;
-        margin: 0.5rem 0;
-    }
-    
-    nav ul {
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    
-    .anime-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
-    
-    .schedule-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 480px) {
-    .anime-grid {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
-    
-    .anime-poster {
-        height: 200px;
-    }
-    
-    .modal-content {
-        width: 95%;
-        padding: 1rem;
-    }
-    
-    .detail-header {
-        flex-direction: column;
-    }
-    
-    .detail-poster {
-        width: 100%;
-    }
-}
-
-.pagination {
-    display: flex;
-    justify-content: center;
-    gap: 0.5rem;
     margin: 2rem 0;
     flex-wrap: wrap;
 }
@@ -488,7 +425,12 @@ h2 {
     cursor: not-allowed;
 }
 
-/* Server Selection */
+.pagination span {
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
 .server-selection {
     margin-top: 1.5rem;
     padding: 1rem;
@@ -526,20 +468,12 @@ h2 {
     font-weight: bold;
 }
 
-/* Loading Animation */
-@keyframes pulse {
-    0% { opacity: 0.6; }
-    50% { opacity: 1; }
-    100% { opacity: 0.6; }
-}
-
 .loading-text {
-    animation: pulse 1.5s infinite;
     text-align: center;
     margin: 2rem 0;
+    color: #aaa;
 }
 
-/* Enhanced Card Styles */
 .anime-card {
     position: relative;
     overflow: hidden;
@@ -576,4 +510,71 @@ h2 {
     font-size: 0.8rem;
     opacity: 0.8;
     text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.loading-text {
+    animation: pulse 1.5s infinite;
+}
+
+@media (max-width: 768px) {
+    header .container {
+        flex-direction: column;
+    }
+    
+    .search-container {
+        width: 100%;
+        margin: 0.5rem 0;
+    }
+    
+    nav ul {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+    
+    .schedule-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .detail-header {
+        flex-direction: column;
+    }
+    
+    .detail-poster {
+        width: 100%;
+    }
+    
+    .episodes-list {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .anime-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .anime-poster {
+        height: 200px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 1rem;
+    }
+    
+    .pagination button {
+        padding: 0.5rem;
+        min-width: 30px;
+    }
 }
