@@ -164,7 +164,7 @@ function createAnimeCard(anime) {
     const type = anime.type || anime.format || 'Unknown';
     const episodes = anime.totalEpisodes || anime.episodes || '?';
     
-    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}';
+    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}');
     
     card.innerHTML = `
         <img src="${image}" alt="${title}" class="anime-poster" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
