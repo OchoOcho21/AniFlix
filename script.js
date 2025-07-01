@@ -68,7 +68,7 @@ function setupEventListeners() {
     
     themeToggle.addEventListener('click', toggleTheme);
     
-    // Server selection
+    
     document.querySelectorAll('.server-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
@@ -158,7 +158,7 @@ function createAnimeCard(anime) {
     card.dataset.id = anime.id;
     
     const title = anime.title?.romaji || anime.title?.userPreferred || anime.title?.english || 'No title';
-    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}';
+    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}');
     
     card.innerHTML = `
         <img src="${anime.image}" alt="${title}" class="anime-poster">
