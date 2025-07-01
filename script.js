@@ -13,12 +13,14 @@ const themeToggle = document.getElementById('theme-toggle');
 const animeModal = document.getElementById('anime-modal');
 const playerModal = document.getElementById('player-modal');
 const closeBtns = document.querySelectorAll('.close-btn');
+const videoPlayer = document.getElementById('video-player');
 
 let currentAnimeId = null;
 let currentEpisodeId = null;
 let currentSearchQuery = '';
 let currentSearchPage = 1;
 let totalSearchPages = 1;
+let currentServer = 'vidcloud';
 
 document.addEventListener('DOMContentLoaded', () => {
     loadTrendingAnime();
@@ -65,6 +67,18 @@ function setupEventListeners() {
     });
     
     themeToggle.addEventListener('click', toggleTheme);
+    
+    // Server selection
+    document.querySelectorAll('.server-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.server-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentServer = btn.dataset.server;
+            if (currentEpisodeId) {
+                playEpisode(currentEpisodeId);
+            }
+        });
+    });
 }
 
 async function fetchAPI(endpoint) {
@@ -78,42 +92,63 @@ async function fetchAPI(endpoint) {
     }
 }
 
-async function loadTrendingAnime() {
+async function loadTrendingAnime(page = 1) {
     const trendingGrid = document.getElementById('trending-anime');
-    trendingGrid.innerHTML = '<div class="loader"></div>';
+    const pagination = document.getElementById('trending-pagination');
     
-    const data = await fetchAPI('/meta/anilist/trending');
+    trendingGrid.innerHTML = '<div class="loader"></div>';
+    pagination.innerHTML = '';
+    
+    const data = await fetchAPI(`/meta/anilist/trending?page=${page}`);
     if (data?.results) {
         trendingGrid.innerHTML = '';
-        data.results.slice(0, 12).forEach(anime => trendingGrid.appendChild(createAnimeCard(anime)));
+        data.results.forEach(anime => trendingGrid.appendChild(createAnimeCard(anime)));
+        
+        if (data.totalPages > 1) {
+            updatePagination(pagination, page, data.totalPages, loadTrendingAnime);
+        }
     } else {
-        trendingGrid.innerHTML = '<p>Failed to load trending anime</p>';
+        trendingGrid.innerHTML = '<p class="loading-text">Failed to load trending anime</p>';
     }
 }
 
-async function loadPopularAnime() {
+async function loadPopularAnime(page = 1) {
     const popularGrid = document.getElementById('popular-anime');
-    popularGrid.innerHTML = '<div class="loader"></div>';
+    const pagination = document.getElementById('popular-pagination');
     
-    const data = await fetchAPI('/meta/anilist/popular');
+    popularGrid.innerHTML = '<div class="loader"></div>';
+    pagination.innerHTML = '';
+    
+    const data = await fetchAPI(`/meta/anilist/popular?page=${page}`);
     if (data?.results) {
         popularGrid.innerHTML = '';
-        data.results.slice(0, 12).forEach(anime => popularGrid.appendChild(createAnimeCard(anime)));
+        data.results.forEach(anime => popularGrid.appendChild(createAnimeCard(anime)));
+        
+        if (data.totalPages > 1) {
+            updatePagination(pagination, page, data.totalPages, loadPopularAnime);
+        }
     } else {
-        popularGrid.innerHTML = '<p>Failed to load popular anime</p>';
+        popularGrid.innerHTML = '<p class="loading-text">Failed to load popular anime</p>';
     }
 }
 
-async function loadAiringSchedule() {
+async function loadAiringSchedule(page = 1) {
     const scheduleGrid = document.getElementById('schedule-anime');
-    scheduleGrid.innerHTML = '<div class="loader"></div>';
+    const pagination = document.getElementById('schedule-pagination');
     
-    const data = await fetchAPI('/meta/anilist/airing-schedule');
+    scheduleGrid.innerHTML = '<div class="loader"></div>';
+    pagination.innerHTML = '';
+    
+    const data = await fetchAPI(`/meta/anilist/airing-schedule?page=${page}`);
     if (data?.results) {
         scheduleGrid.innerHTML = '';
-        data.results.slice(0, 12).forEach(show => scheduleGrid.appendChild(createScheduleCard(show)));
+        data.results.forEach(show => scheduleGrid.appendChild(createScheduleCard(show)));
+        
+        if (data.totalPages > 1) {
+            updatePagination(pagination, page, data.totalPages, loadAiringSchedule);
+        }
     } else {
-        scheduleGrid.innerHTML = '<p>Failed to load schedule</p>';
+        scheduleGrid.innerHTML = '<p class="loading-text">Failed to load schedule</p>';
     }
 }
 
@@ -123,7 +158,7 @@ function createAnimeCard(anime) {
     card.dataset.id = anime.id;
     
     const title = anime.title?.romaji || anime.title?.userPreferred || anime.title?.english || 'No title';
-    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}');
+    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}';
     
     card.innerHTML = `
         <img src="${anime.image}" alt="${title}" class="anime-poster">
@@ -187,46 +222,83 @@ async function searchAnime() {
     Object.values(sections).forEach(sec => sec.classList.remove('active-section'));
     sections.search.classList.add('active-section');
     
-    const data = await fetchAPI(`/meta/anilist/${encodeURIComponent(query)}?page=${currentSearchPage}`);
+    const data = await fetchAPI(`/anime/zoro/${encodeURIComponent(query)}?page=${currentSearchPage}`);
     
     if (data?.results?.length) {
         searchResults.innerHTML = '';
         data.results.forEach(anime => searchResults.appendChild(createAnimeCard(anime)));
         totalSearchPages = data.totalPages || 1;
-        updatePagination(searchPagination, currentSearchPage, totalSearchPages);
+        updatePagination(searchPagination, currentSearchPage, totalSearchPages, (page) => {
+            currentSearchPage = page;
+            loadSearchPage(page);
+        });
     } else {
-        searchResults.innerHTML = '<p>No results found</p>';
+        searchResults.innerHTML = '<p class="loading-text">No results found</p>';
     }
 }
 
-function updatePagination(paginationElement, currentPage, totalPages) {
+function updatePagination(paginationElement, currentPage, totalPages, callback) {
     paginationElement.innerHTML = '';
     
+    if (totalPages <= 1) return;
+    
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    
     const prevButton = document.createElement('button');
-    prevButton.innerHTML = '&laquo;';
+    prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
     prevButton.disabled = currentPage === 1;
-    prevButton.addEventListener('click', () => {
-        if (currentPage > 1) loadSearchPage(currentPage - 1);
-    });
+    prevButton.addEventListener('click', () => callback(currentPage - 1));
     paginationElement.appendChild(prevButton);
     
-    const startPage = Math.max(1, currentPage - 2);
-    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    if (startPage > 1) {
+        const firstButton = document.createElement('button');
+        firstButton.textContent = '1';
+        firstButton.addEventListener('click', () => callback(1));
+        paginationElement.appendChild(firstButton);
+        
+        if (startPage > 2) {
+            const ellipsis = document.createElement('span');
+            ellipsis.textContent = '...';
+            paginationElement.appendChild(ellipsis);
+        }
+    }
+    
     
     for (let i = startPage; i <= endPage; i++) {
         const pageButton = document.createElement('button');
         pageButton.textContent = i;
         if (i === currentPage) pageButton.classList.add('active');
-        pageButton.addEventListener('click', () => loadSearchPage(i));
+        pageButton.addEventListener('click', () => callback(i));
         paginationElement.appendChild(pageButton);
     }
     
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const ellipsis = document.createElement('span');
+            ellipsis.textContent = '...';
+            paginationElement.appendChild(ellipsis);
+        }
+        
+        const lastButton = document.createElement('button');
+        lastButton.textContent = totalPages;
+        lastButton.addEventListener('click', () => callback(totalPages));
+        paginationElement.appendChild(lastButton);
+    }
+    
+    
     const nextButton = document.createElement('button');
-    nextButton.innerHTML = '&raquo;';
+    nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
     nextButton.disabled = currentPage === totalPages;
-    nextButton.addEventListener('click', () => {
-        if (currentPage < totalPages) loadSearchPage(currentPage + 1);
-    });
+    nextButton.addEventListener('click', () => callback(currentPage + 1));
     paginationElement.appendChild(nextButton);
 }
 
@@ -235,24 +307,28 @@ async function loadSearchPage(page) {
     const searchResults = document.getElementById('search-results');
     searchResults.innerHTML = '<div class="loader"></div>';
     
-    const data = await fetchAPI(`/meta/anilist/${encodeURIComponent(currentSearchQuery)}?page=${page}`);
+    const data = await fetchAPI(`/anime/zoro/${encodeURIComponent(currentSearchQuery)}?page=${page}`);
     
     if (data?.results) {
         searchResults.innerHTML = '';
         data.results.forEach(anime => searchResults.appendChild(createAnimeCard(anime)));
-        updatePagination(document.getElementById('search-pagination'), page, data.totalPages || 1);
+        updatePagination(document.getElementById('search-pagination'), page, data.totalPages || 1, (newPage) => {
+            currentSearchPage = newPage;
+            loadSearchPage(newPage);
+        });
     } else {
-        searchResults.innerHTML = '<p>Failed to load results</p>';
+        searchResults.innerHTML = '<p class="loading-text">Failed to load results</p>';
     }
 }
 
 async function showAnimeDetails(animeId) {
+    currentAnimeId = animeId;
     animeModal.style.display = 'block';
     document.getElementById('anime-detail-content').innerHTML = '<div class="loader"></div>';
     
     const anime = await fetchAPI(`/meta/anilist/info/${animeId}`);
     if (!anime) {
-        document.getElementById('anime-detail-content').innerHTML = '<p>Failed to load details</p>';
+        document.getElementById('anime-detail-content').innerHTML = '<p class="loading-text">Failed to load details</p>';
         return;
     }
     
@@ -301,12 +377,20 @@ async function playEpisode(episodeId) {
     playerModal.style.display = 'block';
     videoPlayer.innerHTML = '<div class="loader"></div>';
     
-    const data = await fetchAPI(`/anime/zoro/watch/${episodeId}?server=vidcloud`);
+    const data = await fetchAPI(`/anime/zoro/watch?episodeId=${episodeId}&server=${currentServer}`);
+    
     if (data?.sources?.[0]?.url) {
-        videoPlayer.innerHTML = `<iframe src="${data.sources[0].url}" frameborder="0" allowfullscreen></iframe>`;
+        videoPlayer.innerHTML = `
+            <iframe src="${data.sources[0].url}" 
+                    frameborder="0" 
+                    allowfullscreen
+                    referrerpolicy="origin"
+                    sandbox="allow-scripts allow-same-origin">
+            </iframe>
+        `;
         saveToHistory(episodeId);
     } else {
-        videoPlayer.innerHTML = '<p>No video source available</p>';
+        videoPlayer.innerHTML = '<p class="loading-text">No video source available</p>';
     }
 }
 
@@ -329,7 +413,7 @@ function loadBookmarks() {
     const bookmarkIds = Object.keys(bookmarks);
     
     if (!bookmarkIds.length) {
-        bookmarksGrid.innerHTML = '<p>No bookmarks yet</p>';
+        bookmarksGrid.innerHTML = '<p class="loading-text">No bookmarks yet</p>';
         return;
     }
     
@@ -343,7 +427,7 @@ function loadBookmarks() {
             });
         })
         .catch(() => {
-            bookmarksGrid.innerHTML = '<p>Failed to load bookmarks</p>';
+            bookmarksGrid.innerHTML = '<p class="loading-text">Failed to load bookmarks</p>';
         });
 }
 
