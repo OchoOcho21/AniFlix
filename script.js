@@ -155,18 +155,24 @@ async function loadAiringSchedule(page = 1) {
 function createAnimeCard(anime) {
     const card = document.createElement('div');
     card.className = 'anime-card';
-    card.dataset.id = anime.id;
     
-    const title = anime.title?.romaji || anime.title?.userPreferred || anime.title?.english || 'No title';
-    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}');
+    
+    card.dataset.id = anime.id || anime.malID || anime.alID || '';
+    
+    const title = anime.title?.romaji || anime.title?.userPreferred || anime.title?.english || anime.title || 'No title';
+    const image = anime.image || anime.coverImage?.large || anime.coverImage?.medium || '';
+    const type = anime.type || anime.format || 'Unknown';
+    const episodes = anime.totalEpisodes || anime.episodes || '?';
+    
+    const bookmarks = JSON.parse(localStorage.getItem('bookmarks') || '{}';
     
     card.innerHTML = `
-        <img src="${anime.image}" alt="${title}" class="anime-poster">
+        <img src="${image}" alt="${title}" class="anime-poster" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
         <div class="anime-info">
             <div class="anime-title">${title}</div>
             <div class="anime-meta">
-                <span>${anime.type || 'Unknown'}</span>
-                <span>${anime.totalEpisodes || '?'} eps</span>
+                <span>${type}</span>
+                <span>${episodes} eps</span>
             </div>
         </div>
         <button class="bookmark-btn ${bookmarks[anime.id] ? 'bookmarked' : ''}" data-id="${anime.id}">
@@ -326,39 +332,53 @@ async function showAnimeDetails(animeId) {
     animeModal.style.display = 'block';
     document.getElementById('anime-detail-content').innerHTML = '<div class="loader"></div>';
     
-    const anime = await fetchAPI(`/meta/anilist/info/${animeId}`);
+    
+    let anime = await fetchAPI(`/anime/zoro/info?id=${animeId}`);
+    
+    
+    if (!anime) {
+        anime = await fetchAPI(`/meta/anilist/info/${animeId}`);
+    }
+    
     if (!anime) {
         document.getElementById('anime-detail-content').innerHTML = '<p class="loading-text">Failed to load details</p>';
         return;
     }
     
-    const title = anime.title?.romaji || anime.title?.userPreferred || anime.title?.english || 'No title';
-    const japaneseTitle = anime.title?.native || '';
+    
+    const title = anime.title?.romaji || anime.title?.userPreferred || anime.title?.english || anime.title || 'No title';
+    const japaneseTitle = anime.title?.native || anime.japaneseTitle || '';
+    const image = anime.image || anime.coverImage?.large || anime.coverImage?.medium || '';
+    const type = anime.type || anime.format || 'Unknown';
+    const episodes = anime.totalEpisodes || anime.episodes || '?';
+    const status = anime.status || 'Unknown';
+    const description = anime.description || 'No description available.';
+    const genres = anime.genres || [];
+    const season = anime.season || '';
     
     document.getElementById('anime-detail-content').innerHTML = `
         <div class="detail-header">
-            <img src="${anime.image}" alt="${title}" class="detail-poster">
+            <img src="${image}" alt="${title}" class="detail-poster" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
             <div class="detail-info">
                 <h1 class="detail-title">${title} <small>${japaneseTitle}</small></h1>
                 <div class="detail-meta">
-                    <span><i class="fas fa-tv"></i> ${anime.type || 'Unknown'}</span>
-                    <span><i class="fas fa-list-ol"></i> ${anime.totalEpisodes || '?'} episodes</span>
-                    <span><i class="fas fa-star"></i> ${anime.rating ? `${anime.rating}%` : 'N/A'}</span>
-                    <span><i class="fas fa-calendar"></i> ${anime.releaseDate || 'Unknown'}</span>
-                    <span><i class="fas fa-info-circle"></i> ${anime.status || 'Unknown'}</span>
+                    <span><i class="fas fa-tv"></i> ${type}</span>
+                    <span><i class="fas fa-list-ol"></i> ${episodes} episodes</span>
+                    <span><i class="fas fa-info-circle"></i> ${status}</span>
+                    ${season ? `<span><i class="fas fa-calendar"></i> ${season}</span>` : ''}
                 </div>
                 <div class="detail-genres">
-                    ${(anime.genres || []).map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
+                    ${genres.map(genre => `<span class="genre-tag">${genre}</span>`).join('')}
                 </div>
-                <p class="detail-description">${anime.description || 'No description available.'}</p>
+                <p class="detail-description">${description}</p>
             </div>
         </div>
         <div class="episodes-section">
             <h3>Episodes</h3>
             <div class="episodes-list" id="episodes-list">
-                ${Array.from({length: anime.totalEpisodes || 0}, (_, i) => `
-                    <button class="episode-btn" data-id="${animeId}$episode$${i+1}">
-                        Ep ${i+1}
+                ${(anime.episodes || Array.from({length: episodes}, (_, i) => i + 1)).map(ep => `
+                    <button class="episode-btn" data-id="${animeId}$episode$${typeof ep === 'object' ? ep.number : ep}">
+                        Ep ${typeof ep === 'object' ? ep.number : ep}
                     </button>
                 `).join('')}
             </div>
