@@ -397,21 +397,47 @@ async function playEpisode(episodeId) {
     playerModal.style.display = 'block';
     videoPlayer.innerHTML = '<div class="loader"></div>';
     
-    const data = await fetchAPI(`/anime/zoro/watch?episodeId=${episodeId}&server=${currentServer}`);
-    
-    if (data?.sources?.[0]?.url) {
-        videoPlayer.innerHTML = `
-            <iframe src="${data.sources[0].url}" 
-                    frameborder="0" 
-                    allowfullscreen
-                    referrerpolicy="origin"
-                    sandbox="allow-scripts allow-same-origin">
-            </iframe>
-        `;
-        saveToHistory(episodeId);
-    } else {
-        videoPlayer.innerHTML = '<p class="loading-text">No video source available</p>';
+    try {
+        
+        let data = await fetchAPI(`/anime/zoro/watch?episodeId=${episodeId}&server=${currentServer}`);
+        
+        
+        if (!data?.sources?.[0]?.url && currentServer !== 'vidcloud') {
+            data = await fetchAPI(`/anime/zoro/watch?episodeId=${episodeId}&server=vidcloud`);
+        }
+        
+        
+        if (data?.sources?.[0]?.url) {
+            videoPlayer.innerHTML = `
+                <iframe src="${data.sources[0].url}" 
+                        frameborder="0" 
+                        allowfullscreen
+                        referrerpolicy="origin"
+                        sandbox="allow-scripts allow-same-origin">
+                </iframe>
+            `;
+            saveToHistory(episodeId);
+        } else {
+            showPlayerError("No video source available for this episode");
+        }
+    } catch (error) {
+        console.error('Playback Error:', error);
+        showPlayerError("Failed to load video. Please try another server.");
     }
+}
+
+function showPlayerError(message) {
+    videoPlayer.innerHTML = `
+        <div class="player-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>${message}</p>
+            <button class="retry-btn">Retry</button>
+        </div>
+    `;
+    
+    document.querySelector('.retry-btn')?.addEventListener('click', () => {
+        playEpisode(currentEpisodeId);
+    });
 }
 
 function toggleBookmark(animeId, button) {
